@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retail Voice Analyst - Banglish Audio Analysis</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .upload-zone {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #f8f9ff;
+        }
+
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background-color: #f0f2ff;
+        }
+
+        .upload-zone.dragover {
+            background-color: #e8ebff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .upload-zone p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-zone .file-input {
+            display: none;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .button:hover {
+            background: #764ba2;
+        }
+
+        .button.secondary {
+            background: #6c757d;
+        }
+
+        .button.secondary:hover {
+            background: #5a6268;
+        }
+
+        .button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+
+        .status-box.success {
+            background-color: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .status-box.error {
+            background-color: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+
+        .status-box.loading {
+            background-color: #d1ecf1;
+            border-left-color: #0c5460;
+            color: #0c5460;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .transcript-section {
+            margin-top: 20px;
+        }
+
+        .transcript-segment {
+            background: #f8f9fa;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .transcript-segment.smr {
+            border-left-color: #28a745;
+        }
+
+        .transcript-segment.shopkeeper {
+            border-left-color: #ffc107;
+        }
+
+        .speaker-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .transcript-segment.smr .speaker-label {
+            color: #28a745;
+        }
+
+        .transcript-segment.shopkeeper .speaker-label {
+            color: #ff9800;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.85rem;
+            margin-left: 10px;
+        }
+
+        .qa-section {
+            margin-top: 20px;
+        }
+
+        .qa-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 12px 0;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .qa-question {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .qa-answer {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+
+        .answer-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .answer-badge.yes {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .answer-badge.no {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .confidence {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .reasoning {
+            background: white;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 4px;
+            font-style: italic;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .analysis-history {
+            margin-top: 20px;
+        }
+
+        .history-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .history-item:hover {
+            background: #e9ecef;
+        }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-filename {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .history-date {
+            font-size: 0.85rem;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .history-status {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        .history-status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .history-status.pending,
+        .history-status.processing {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .history-status.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 80%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-modal {
+            font-size: 2rem;
+            cursor: pointer;
+            color: #999;
+            border: none;
+            background: none;
+            padding: 0;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            color: #999;
+            font-weight: bold;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            margin-bottom: -2px;
+        }
+
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ Retail Voice Analyst</h1>
+            <p>SMR & Shopkeeper Banglish Audio Transcription & Insight Engine</p>
+        </header>
+
+        <div class="content">
+            <!-- Upload Section -->
+            <div class="card">
+                <h2>Upload Audio</h2>
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-icon">📁</div>
+                    <p><strong>Drag and drop your audio file here</strong></p>
+                    <p style="font-size: 0.9rem;">or click to select</p>
+                    <button class="button" id="selectFileBtn">Choose File</button>
+                    <input type="file" id="fileInput" accept=".mp3,.wav,.m4a">
+                </div>
+                <div id="uploadStatus"></div>
+
+                <!-- Questions Preview -->
+                <div style="margin-top: 20px;">
+                    <h3 style="color: #333; margin-bottom: 12px;">📋 Analysis Questions</h3>
+                    <div id="questionsPreview" style="font-size: 0.9rem;">
+                        <div class="qa-item" style="margin: 8px 0; padding: 10px;">
+                            <span style="font-weight: bold; color: #667eea;">Q1.</span> Did the SMR ask the shopkeeper about their current stock?
+                        </div>
+                        <div class="qa-item" style="margin: 8px 0; padding: 10px;">
+                            <span style="font-weight: bold; color: #667eea;">Q2.</span> Did the SMR ask whether the shopkeeper needs any product?
+                        </div>
+                        <div class="qa-item" style="margin: 8px 0; padding: 10px;">
+                            <span style="font-weight: bold; color: #667eea;">Q3.</span> Did the shopkeeper place an order or agree to restock?
+                        </div>
+                        <div class="qa-item" style="margin: 8px 0; padding: 10px;">
+                            <span style="font-weight: bold; color: #667eea;">Q4.</span> Did the SMR ask whether the shopkeeper needs Coca-Cola?
+                        </div>
+                        <div class="qa-item" style="margin: 8px 0; padding: 10px;">
+                            <span style="font-weight: bold; color: #667eea;">Q5.</span> Did the SMR ask the shopkeeper whether the SO (Sales Officer) has visited?
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="card">
+                <h2>Analysis Results</h2>
+                <div id="resultsContainer" style="display: none;">
+                    <div class="tabs">
+                        <button class="tab-button active" data-tab="transcript">Transcript</button>
+                        <button class="tab-button" data-tab="qa">Q&A Results</button>
+                    </div>
+
+                    <div id="transcript" class="tab-content active">
+                        <div id="transcriptContent"></div>
+                    </div>
+
+                    <div id="qa" class="tab-content">
+                        <div id="qaContent"></div>
+                    </div>
+                </div>
+                <div id="noResults" style="text-align: center; color: #999;">
+                    <p>Upload an audio file to see analysis results</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="card">
+            <h2>Analysis History</h2>
+            <div id="historyContainer">
+                <p style="text-align: center; color: #999;">No analyses yet</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for full analysis view -->
+    <div id="analysisModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Full Analysis</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = `${window.location.origin}/api/v1`;
+        let currentAnalysisId = null;
+
+        // File upload handlers
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const selectFileBtn = document.getElementById('selectFileBtn');
+        const uploadStatus = document.getElementById('uploadStatus');
+
+        selectFileBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                uploadStatus.innerHTML = '<div class="status-box loading"><span class="spinner"></span>Uploading...</div>';
+
+                const response = await fetch(`${API_URL}/upload-audio`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const data = await response.json();
+                currentAnalysisId = data.analysis_id;
+
+                uploadStatus.innerHTML = '<div class="status-box success">✓ File uploaded successfully. Processing...</div>';
+                
+                // Poll for results
+                pollAnalysisStatus();
+                loadHistory();
+            } catch (error) {
+                uploadStatus.innerHTML = `<div class="status-box error">✗ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function pollAnalysisStatus() {
+            if (!currentAnalysisId) return;
+
+            try {
+                const response = await fetch(`${API_URL}/analysis/${currentAnalysisId}`);
+                if (!response.ok) throw new Error('Failed to fetch status');
+
+                const data = await response.json();
+
+                if (data.status === 'processing' || data.status === 'pending') {
+                    setTimeout(pollAnalysisStatus, 2000); // Poll every 2 seconds
+                } else if (data.status === 'completed') {
+                    displayResults(data);
+                    uploadStatus.innerHTML = '<div class="status-box success">✓ Analysis completed!</div>';
+                } else if (data.status === 'failed') {
+                    uploadStatus.innerHTML = `<div class="status-box error">✗ Analysis failed: ${data.error_message}</div>`;
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+                setTimeout(pollAnalysisStatus, 5000);
+            }
+        }
+
+        function displayResults(analysisData) {
+            document.getElementById('resultsContainer').style.display = 'block';
+            document.getElementById('noResults').style.display = 'none';
+
+            // Display transcript
+            const transcriptContent = document.getElementById('transcriptContent');
+            transcriptContent.innerHTML = '';
+
+            if (analysisData.transcript && Array.isArray(analysisData.transcript)) {
+                analysisData.transcript.forEach(segment => {
+                    const speakerClass = segment.speaker.toLowerCase() === 'smr' ? 'smr' : 'shopkeeper';
+                    const html = `
+                        <div class="transcript-segment ${speakerClass}">
+                            <div class="speaker-label">
+                                👤 ${segment.speaker}
+                                <span class="timestamp">${segment.timestamp_start.toFixed(1)}s - ${segment.timestamp_end.toFixed(1)}s</span>
+                            </div>
+                            <div>${segment.text}</div>
+                        </div>
+                    `;
+                    transcriptContent.innerHTML += html;
+                });
+            }
+
+            // Display Q&A results
+            const qaContent = document.getElementById('qaContent');
+            qaContent.innerHTML = '';
+
+            if (analysisData.qa_results && Array.isArray(analysisData.qa_results)) {
+                analysisData.qa_results.forEach(qa => {
+                    const answerBadge = qa.answer ? 'yes' : 'no';
+                    const answerText = qa.answer ? 'YES' : 'NO';
+                    const confidence = (qa.confidence * 100).toFixed(0);
+
+                    const html = `
+                        <div class="qa-item">
+                            <div class="qa-question">❓ ${qa.question}</div>
+                            <div class="qa-answer">
+                                <span class="answer-badge ${answerBadge}">${answerText}</span>
+                                <span class="confidence">Confidence: ${confidence}%</span>
+                            </div>
+                            <div class="reasoning"><strong>Reasoning:</strong> ${qa.reasoning}</div>
+                        </div>
+                    `;
+                    qaContent.innerHTML += html;
+                });
+            }
+
+            // Setup tab switching
+            setupTabs();
+        }
+
+        function setupTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabName = button.getAttribute('data-tab');
+                    
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    button.classList.add('active');
+                    document.getElementById(tabName).classList.add('active');
+                });
+            });
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch(`${API_URL}/analyses?limit=10`);
+                if (!response.ok) throw new Error('Failed to load history');
+
+                const data = await response.json();
+                const historyContainer = document.getElementById('historyContainer');
+
+                if (data.analyses.length === 0) {
+                    historyContainer.innerHTML = '<p style="text-align: center; color: #999;">No analyses yet</p>';
+                    return;
+                }
+
+                historyContainer.innerHTML = data.analyses.map(analysis => {
+                    const date = new Date(analysis.created_at).toLocaleDateString();
+                    const time = new Date(analysis.created_at).toLocaleTimeString();
+                    
+                    return `
+                        <div class="history-item" onclick="viewAnalysis('${analysis.id}')">
+                            <div class="history-info">
+                                <div class="history-filename">📄 ${analysis.filename}</div>
+                                <div class="history-date">${date} at ${time}</div>
+                            </div>
+                            <div class="history-status ${analysis.status}">${analysis.status.toUpperCase()}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        async function viewAnalysis(analysisId) {
+            try {
+                const response = await fetch(`${API_URL}/analysis/${analysisId}`);
+                if (!response.ok) throw new Error('Failed to load analysis');
+
+                const data = await response.json();
+
+                if (data.status !== 'completed') {
+                    alert('This analysis is still processing or failed.');
+                    return;
+                }
+
+                const modalContent = document.getElementById('modalContent');
+                let html = `<h3>Analysis: ${data.filename}</h3>`;
+
+                // Transcript
+                html += '<h4>📜 Full Transcript</h4>';
+                if (data.transcript) {
+                    html += data.transcript.map(segment => {
+                        const speakerClass = segment.speaker.toLowerCase() === 'smr' ? 'smr' : 'shopkeeper';
+                        return `
+                            <div class="transcript-segment ${speakerClass}">
+                                <div class="speaker-label">${segment.speaker} (${segment.timestamp_start.toFixed(1)}s)</div>
+                                <div>${segment.text}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // Q&A Results
+                html += '<h4>❓ Q&A Results</h4>';
+                if (data.qa_results) {
+                    html += data.qa_results.map(qa => {
+                        const answerBadge = qa.answer ? 'yes' : 'no';
+                        const answerText = qa.answer ? 'YES' : 'NO';
+                        return `
+                            <div class="qa-item">
+                                <div class="qa-question">${qa.question}</div>
+                                <div class="qa-answer">
+                                    <span class="answer-badge ${answerBadge}">${answerText}</span>
+                                    <span class="confidence">Confidence: ${(qa.confidence * 100).toFixed(0)}%</span>
+                                </div>
+                                <div class="reasoning"><strong>Reasoning:</strong> ${qa.reasoning}</div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                modalContent.innerHTML = html;
+                document.getElementById('analysisModal').classList.add('active');
+            } catch (error) {
+                alert('Error loading analysis: ' + error.message);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('analysisModal').classList.remove('active');
+        }
+
+        // Initialize
+        loadHistory();
+        setInterval(loadHistory, 10000); // Refresh history every 10 seconds
+    </script>
+</body>
+</html>
