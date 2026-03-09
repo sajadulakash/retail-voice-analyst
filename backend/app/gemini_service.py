@@ -57,21 +57,60 @@ class GeminiService:
         """
         print("Starting transcription and speaker diarization...")
         
-        prompt = """You are an expert in Bengali language and Banglish (Bengali written in Latin script or mixed with English).
-        
-Analyze this audio recording of a retail field visit conversation. The conversation is in Banglish.
+        prompt = """You are an expert in Bengali language and Banglish (Bengali written in Roman/Latin script).
 
-CONTEXT: This is a conversation between an SMR (Sales Monitoring Representative) who visits retail shops, and a Shopkeeper. The SMR checks what products the shop has in stock and what they need to reorder.
+Analyze this audio recording of a retail field visit conversation.
 
-Please perform the following tasks:
+=== SCRIPT RULE — STRICTLY ENFORCED ===
+ALL transcribed text MUST be written in Roman/Latin script (Banglish).
+DO NOT use any Bengali Unicode characters (e.g. ক, খ, আ, ি, া, ্, etc.) anywhere in the output.
+Even if the speaker says something purely in Bengali, write it phonetically in English letters.
+Example: "ami bujhte parchi na" NOT "আমি বুঝতে পারছি না"
+This rule has NO exceptions.
 
-1. TRANSCRIPTION: Provide a complete, accurate transcription of the conversation in Banglish. Include all words, including grocery items like "Atta," "Moyda," "Suji," etc.
+=== SCENE CONTEXT ===
+An SMR (Sales Monitoring Representative / field sales agent) has walked INTO a retail shop.
+The Shopkeeper is the OWNER or ATTENDANT who is already at the shop.
 
-2. SPEAKER DIARIZATION: Identify the different speakers in the conversation. Classify each speaker as either "SMR" (the visiting sales representative) or "Shopkeeper".
+=== HOW TO IDENTIFY WHO IS WHO ===
+You MUST use these behavioural cues to assign roles — do NOT guess based on voice alone:
 
-3. TIME SYNCHRONIZATION: For each utterance, provide approximate start and end times in seconds.
+SMR (the visiting field agent) — typically:
+  • INITIATES the conversation and greets the shopkeeper first
+  • ASKS questions: about stock, sales, product availability, competitor products
+  • OFFERS or MENTIONS specific products, brands, SKUs, promotions, or prices
+  • CHECKS or VERIFIES information ("apnar kache ki ache?", "ki ki lagbe?", "SO visit korche?")
+  • Gives instructions or suggestions ("ei product ta rakhun", "order diye den")
+  • Drives the conversation forward — usually speaks MORE and asks follow-up questions
 
-Format your response as a JSON object with the following structure:
+Shopkeeper (the shop owner/attendant) — typically:
+  • RESPONDS to and ANSWERS the SMR's questions
+  • States what they HAVE in stock ("atta ache, mayda nai")
+  • States what they NEED or want to ORDER ("2 carton din", "dam ta koto?")
+  • Confirms or REJECTS offers ("theek ache", "na lagbe na")
+  • May ask the price or delivery date, but rarely initiates new topics
+
+=== KEY RULE ===
+In a typical exchange:
+  - The person who ASKS = SMR
+  - The person who ANSWERS = Shopkeeper
+If you are uncertain about a segment, look at the NEXT segment — if the next speaker is clearly the SMR asking again, the current speaker is almost certainly the Shopkeeper replying.
+
+=== TASKS ===
+1. TRANSCRIPTION: Provide a complete, accurate transcription in Banglish — Roman/Latin letters ONLY, no Bengali Unicode. Include all words (grocery items like Atta, Moyda, Suji, product names, brand names, etc.) written phonetically in English letters.
+
+2. SPEAKER DIARIZATION: Label every segment as exactly "SMR" or "Shopkeeper" using the behavioural rules above.
+
+3. TIME SYNCHRONIZATION: Provide approximate start and end timestamps in seconds.
+
+=== SELF-CHECK BEFORE RESPONDING ===
+Before finalising, verify:
+- Does the SMR speak first and ask questions throughout?
+- Does the Shopkeeper respond and provide information?
+- Are question-answer pairs correctly paired between SMR and Shopkeeper?
+If not, swap the labels and re-verify.
+
+Format your response as a JSON object:
 {
     "transcript": [
         {
@@ -81,7 +120,7 @@ Format your response as a JSON object with the following structure:
             "timestamp_end": 2.3
         },
         {
-            "speaker": "Shopkeeper", 
+            "speaker": "Shopkeeper",
             "text": "atta ache, kintu moyda lagbe",
             "timestamp_start": 2.5,
             "timestamp_end": 4.1
@@ -100,14 +139,6 @@ Format your response as a JSON object with the following structure:
         }
     ]
 }
-
-Be very careful to:
-- Accurately capture Banglish terms and phonetics
-- Correctly identify grocery and retail items
-- Preserve the exact meaning even if written in English transliteration
-- Mark speaker changes clearly
-- The SMR is typically the one asking questions about stock and offering products
-- The Shopkeeper is the one responding about what they have and what they need
 """
         
         try:
@@ -164,17 +195,22 @@ Be very careful to:
         
         questions_text = "\n".join([f"{i+1}. {q['question']}" for i, q in enumerate(questions)])
         
-        prompt = f"""Based on the following Banglish retail field visit conversation transcript between an SMR (Sales Monitoring Representative) and a Shopkeeper, answer the following Yes/No questions.
+        prompt = f"""You are analyzing a Banglish retail field visit conversation transcript between:
+- SMR (Sales Monitoring Representative): the visiting field sales agent who ASKS questions, checks stock, and offers products
+- Shopkeeper: the shop owner/attendant who ANSWERS, states their stock, and places or refuses orders
 
-CONTEXT: The SMR visits retail shops to check stock levels, take orders, and understand shopkeeper needs.
+IMPORTANT ROLE REMINDER:
+- Segments labelled "SMR" = the field agent who initiated the visit
+- Segments labelled "Shopkeeper" = the person at the shop responding to the SMR
+- Questions in the transcript come from the SMR; answers come from the Shopkeeper
 
 TRANSCRIPT:
 {transcript_text}
 
-QUESTIONS:
+QUESTIONS TO ANSWER:
 {questions_text}
 
-For each question, respond with a JSON array of objects in this format:
+Answer each question with a JSON array:
 [
     {{
         "question": "Did the SMR ask the shopkeeper about current stock/inventory?",
@@ -190,8 +226,10 @@ For each question, respond with a JSON array of objects in this format:
     }}
 ]
 
-Confidence should be between 0.0 and 1.0.
-Reasoning should explain your answer based on specific parts of the transcript.
+Rules:
+- Confidence between 0.0 and 1.0
+- Reasoning must cite specific phrases from the transcript
+- Base answers strictly on what was said, not assumed
 """
         
         try:

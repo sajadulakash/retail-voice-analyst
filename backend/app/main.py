@@ -6,7 +6,8 @@ import os
 
 from app.config import get_settings
 from app import store
-from app.audio_service import AudioAnalysisService
+from app.audio_service import AudioAnalysisService, PREDEFINED_QUESTIONS
+from app.schemas import QuestionCreate
 
 settings = get_settings()
 
@@ -31,6 +32,7 @@ app.add_middleware(
 async def startup_event():
     """Initialize application on startup"""
     os.makedirs(settings.upload_dir, exist_ok=True)
+    store.init_questions(PREDEFINED_QUESTIONS)
     print(f"Starting {settings.app_title}")
     print(f"Upload directory: {settings.upload_dir}")
 
@@ -136,9 +138,44 @@ async def delete_analysis(analysis_id: str):
 
 @app.get("/api/v1/questions")
 async def get_qa_questions():
-    """Get predefined Q&A questions used in analysis."""
-    from app.audio_service import PREDEFINED_QUESTIONS
-    return {"questions": PREDEFINED_QUESTIONS}
+    """Get all Q&A questions used in analysis."""
+    return {"questions": store.get_all_questions()}
+
+
+@app.post("/api/v1/questions", status_code=201)
+async def create_question(payload: QuestionCreate):
+    """Add a new analysis question."""
+    question_id = f"q{uuid.uuid4().hex[:8]}"
+    new_question = {
+        "id": question_id,
+        "question": payload.question.strip(),
+        "category": payload.category.strip(),
+    }
+    store.save_question(question_id, new_question)
+    return new_question
+
+
+@app.put("/api/v1/questions/{question_id}")
+async def update_question(question_id: str, payload: QuestionCreate):
+    """Update an existing question."""
+    existing = store.get_question(question_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Question not found")
+    updated = {
+        "id": question_id,
+        "question": payload.question.strip(),
+        "category": payload.category.strip(),
+    }
+    store.save_question(question_id, updated)
+    return updated
+
+
+@app.delete("/api/v1/questions/{question_id}")
+async def delete_question(question_id: str):
+    """Delete a question."""
+    if not store.delete_question(question_id):
+        raise HTTPException(status_code=404, detail="Question not found")
+    return {"message": "Question deleted successfully"}
 
 
 # Mount frontend

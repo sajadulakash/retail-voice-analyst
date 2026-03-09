@@ -2,6 +2,20 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
+
+class QuestionItem(BaseModel):
+    """A single analysis question."""
+    id: str
+    question: str
+    category: str = ""
+
+
+class QuestionCreate(BaseModel):
+    """Payload for creating or updating a question."""
+    question: str
+    category: str = ""
+
+
 class TranscriptSegment(BaseModel):
     """Single segment of transcript with speaker info"""
     speaker: str

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "q1",
+    "question": "Did the SMR ask the shopkeeper about their current stock?",
+    "category": "stock_inquiry"
+  },
+  {
+    "id": "qff7a8498",
+    "question": "test msg",
+    "category": "xxxx"
+  }
+]

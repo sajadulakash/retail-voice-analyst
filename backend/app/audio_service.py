@@ -107,8 +107,10 @@ class AudioAnalysisService:
                 for seg in transcript_segments
             ])
 
-            # Stage 2: Q&A Analysis
-            qa_results = GeminiService.analyze_qa(transcript_text, PREDEFINED_QUESTIONS)
+            # Stage 2: Q&A Analysis using live questions from store
+            from app import store as _store
+            live_questions = _store.get_all_questions()
+            qa_results = GeminiService.analyze_qa(transcript_text, live_questions)
 
             # Store results in memory
             store.save_analysis(analysis_id, {
